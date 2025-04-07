@@ -9,26 +9,19 @@ use futures::FutureExt;
 extern crate alloc;
 pub trait NoEndFuture: Future<Output = ()> + Unpin {}
 
-pub struct DynamicJoinMap {
-    job_queue: BTreeMap<usize, Box<dyn Future<Output = ()>>>,
-    cycle_counter: usize,
-}
-
-impl DynamicJoinMap {
-    pub fn add(&mut self, fut: Box<dyn NoEndFuture>) -> usize {
-        self.job_queue.insert(self.cycle_counter, fut);
-        let idx = self.cycle_counter;
-        self.cycle_counter += 1;
-        idx
-    }
-}
-
 pub struct DynamicJoinArray {
     job_queue: BTreeMap<usize, Box<dyn NoEndFuture>>,
     cycle_counter: usize,
 }
 
 impl DynamicJoinArray {
+    pub fn new() -> Self {
+        Self {
+            job_queue: BTreeMap::new(),
+            cycle_counter: 0,
+        }
+    }
+
     pub fn add(&mut self, fut: Box<dyn NoEndFuture>) -> usize {
         self.job_queue.insert(self.cycle_counter, fut);
         let id = self.cycle_counter;
