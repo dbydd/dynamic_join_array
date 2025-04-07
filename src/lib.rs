@@ -7,7 +7,7 @@ use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 use futures::FutureExt;
 
 extern crate alloc;
-trait NoEndFuture: Future<Output = ()> + Unpin {}
+pub trait NoEndFuture: Future<Output = ()> + Unpin {}
 
 pub struct DynamicJoinMap {
     job_queue: BTreeMap<usize, Box<dyn Future<Output = ()>>>,
