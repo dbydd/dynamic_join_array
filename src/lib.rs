@@ -4,7 +4,6 @@
 use core::{future::Future, pin::Pin, task::Poll};
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
-use futures::FutureExt;
 
 extern crate alloc;
 pub trait NoEndFuture: Future<Output = ()> + Unpin {}
