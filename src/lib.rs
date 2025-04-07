@@ -39,17 +39,26 @@ impl DynamicJoinArray {
     pub fn drop(&mut self, id: &usize) -> Option<Box<dyn NoEndFuture>> {
         self.job_queue.remove(id)
     }
+
+    pub fn work<'a>(&'a mut self) -> DynamicJoinArrayFuture<'a> {
+        DynamicJoinArrayFuture { ref_to_array: self }
+    }
 }
 
-impl Future for DynamicJoinArray {
+pub struct DynamicJoinArrayFuture<'a> {
+    ref_to_array: &'a mut DynamicJoinArray,
+}
+
+impl<'a> Future for DynamicJoinArrayFuture<'a> {
     type Output = ();
 
-    fn poll<'a>(
-        self: core::pin::Pin<&'a mut Self>,
+    fn poll<'b>(
+        self: core::pin::Pin<&'b mut Self>,
         cx: &mut core::task::Context<'_>,
     ) -> core::task::Poll<Self::Output> {
         let this = unsafe { self.get_unchecked_mut() };
-        this.job_queue
+        this.ref_to_array
+            .job_queue
             .iter_mut()
             .filter_map(
                 |(id, job)| match unsafe { Pin::new_unchecked(job).poll(cx) } {
@@ -60,7 +69,7 @@ impl Future for DynamicJoinArray {
             .collect::<Vec<_>>()
             .iter()
             .for_each(|to_drop| {
-                this.job_queue.remove(to_drop);
+                this.ref_to_array.job_queue.remove(to_drop);
             });
 
         Poll::Pending
@@ -70,7 +79,7 @@ impl Future for DynamicJoinArray {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::future::Future;
+    use core::future::{Future, IntoFuture};
     use futures::task::Poll;
 
     // Dummy future that completes immediately
@@ -102,7 +111,8 @@ mod tests {
 
         // Simulate polling the future (this would normally happen during runtime)
         let mut context = core::task::Context::from_waker(futures::task::noop_waker_ref());
-        let mut pinned = unsafe { Pin::new_unchecked(&mut dynamic_join_array) };
+        let dynamic_join_array_future = &mut dynamic_join_array.work().into_future();
+        let mut pinned = unsafe { Pin::new_unchecked(dynamic_join_array_future) };
 
         for _ in (0..1000) {
             match pinned.as_mut().poll(&mut context) {
