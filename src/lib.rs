@@ -1,13 +1,7 @@
 #![no_std]
 #![feature(allocator_api, sync_unsafe_cell, ptr_as_ref_unchecked)]
 
-use core::{
-    cell::{SyncUnsafeCell, UnsafeCell},
-    future::Future,
-    ops::AddAssign,
-    pin::Pin,
-    task::Poll,
-};
+use core::{future::Future, ops::AddAssign, pin::Pin, task::Poll};
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 use async_lock::RwLock;
