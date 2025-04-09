@@ -7,10 +7,9 @@ use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 use async_lock::RwLock;
 
 extern crate alloc;
-pub trait NoEndFuture: Future<Output = ()> + Send + Sync {}
 
 pub struct DynamicJoinArray {
-    job_queue: RwLock<BTreeMap<usize, Pin<Box<dyn NoEndFuture>>>>,
+    job_queue: RwLock<BTreeMap<usize, Pin<Box<dyn Future<Output = ()> + Send + Sync>>>>,
     cycle_counter: RwLock<usize>,
 }
 
@@ -22,7 +21,7 @@ impl DynamicJoinArray {
         }
     }
 
-    pub async fn add(&self, fut: Pin<Box<dyn NoEndFuture>>) -> usize {
+    pub async fn add(&self, fut: Pin<Box<dyn Future<Output = ()> + Send + Sync>>) -> usize {
         let mut guard = self.cycle_counter.write().await;
         let id = *guard;
         guard.add_assign(1);
@@ -30,7 +29,10 @@ impl DynamicJoinArray {
         id
     }
 
-    pub async fn drop(&self, id: &usize) -> Option<Pin<Box<dyn NoEndFuture>>> {
+    pub async fn drop(
+        &self,
+        id: &usize,
+    ) -> Option<Pin<Box<dyn Future<Output = ()> + Send + Sync>>> {
         self.job_queue.write().await.remove(id)
     }
 
@@ -91,7 +93,6 @@ mod tests {
         }
     }
     impl Unpin for DummyFuture {}
-    impl NoEndFuture for DummyFuture {}
 
     #[tokio::test]
     async fn test_dynamic_join_array() {
